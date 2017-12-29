@@ -2,6 +2,8 @@
 
 # Reference: http://uc-r.github.io/descriptive
 
+devtools::install_github("bradleyboehmke/harrypotter")
+
 library(tidyverse)      # data manipulation & plotting
 library(stringr)        # text cleaning and regular expressions
 library(tidytext)       # provides additional text mining functions
@@ -35,9 +37,40 @@ for(i in seq_along(titles)) { # 1 to length(titles). (looping through each book)
 
 # Word Frequency ----
 
+# insert df & word column, returns word frequency
 TM.WordFrequency <- function(df, word.col.string){
-  df %>% 
-    # anti_join(stop_words, by = word.col.string) %>%
-    count(df[[word.col.string]], sort = TRUE)
+  require(dplyr); require(lazyeval); require(tidytext)
+  df %>%
+    anti_join(stop_words) %>%
+    count_(interp(~x, x = as.name(word.col.string)), sort = TRUE)
 }
 TM.WordFrequency(series, "word")
+
+# insert df, >= 1 grouping column, and word column. returns grouped word counts
+TM.WordFrequency.Groups <- function(df, group.col.string, word.col.string){
+  require(dplyr); require(lazyeval); require(tidytext)
+  df %>%
+    anti_join(stop_words) %>%
+    group_by_(.dots = group.col.string) %>%
+    count_(interp(~x, x = as.name(word.col.string)), sort = TRUE)
+}
+TM.WordFrequency.Groups(series, "book", "word")
+TM.WordFrequency.Groups(series, "chapter", "word")
+TM.WordFrequency.Groups(series, c("book","chapter"), "word")
+
+# insert text vector, get word frequency
+TM.WordFrequency.Vector <- function(v){
+  data_frame(text = v) %>% unnest_tokens(word, text) %>% anti_join(stop_words) %>% count(word, sort = TRUE)
+}
+TM.WordFrequency.Vector(chamber_of_secrets[18])
+TM.WordFrequency.Vector(chamber_of_secrets[18:20]) # char vector length 3 elements
+TM.WordFrequency.Vector(goblet_of_fire[18])
+TM.WordFrequency.Vector(c(chamber_of_secrets[18], goblet_of_fire[18])) # char vector length 2 elements
+
+
+# check
+series %>% anti_join(stop_words) %>% group_by(book) %>% count(word, sort = TRUE) %>% top_n(10) %>%
+  ggplot(aes(word, n)) + geom_bar(stat = "identity")
+
+
+# todo: unnest tokens within the function proper. return plot.
