@@ -1,4 +1,5 @@
 # Sandbox #
+print(object.size(series), units = "auto")
 
 
 
@@ -8,6 +9,8 @@ library(tidyverse); library(tidytext); library(lazyeval)
 # input dataframe, group by column string, summarise column string
 # column name strings need interp(). '~' mandatory. returns a function, or just a var
 simpleFunction <- function(dataset, group_var, sum_var){
+  # standard evaluation: use xx_ for evaluating strings, and interp() for evaluating strings in the function
+  # lazy evaluation: use interp() to build an expression from string variables & other
   require(dplyr)
   require(lazyeval)
   dataset %>% 
@@ -37,3 +40,23 @@ data_frame(text = chamber_of_secrets[19]) %>% unnest_tokens(word, text)
 data_frame(text = chamber_of_secrets[19]) %>% unnest_tokens(word, text) %>% count(word, sort = TRUE)
 data_frame(text = chamber_of_secrets[19]) %>% unnest_tokens(word, text) %>% anti_join(stop_words) %>%
   count(word, sort = TRUE)
+
+
+
+# char lists & vectors
+str(books)
+class(books)
+length(books)
+str(books[1])
+str(books[[1]])
+length(books[[1]])
+seq_along(titles); 1:7
+
+
+# test ticket data
+test.tickets <- data_frame(sg = c("a","a","r10","p","r10"), 
+                           title = c("kiosk down again","kiosk tm issue, kiosk broke", "lane down 201","tax refund lane","lane frozen"))
+test.tickets
+TM.WordFrequency.Unnest(test.tickets, "title") # raw word count
+TM.WordFrequency.Groups.Unnest(test.tickets, "sg", "title") # raw word count by group
+
