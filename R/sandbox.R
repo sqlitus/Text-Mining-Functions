@@ -60,3 +60,27 @@ test.tickets
 TM.WordFrequency.Unnest(test.tickets, "title") # raw word count
 TM.WordFrequency.Groups.Unnest(test.tickets, "sg", "title") # raw word count by group
 
+
+# top n
+TM.WordFrequency.Unnest(series.2, "text") %>% top_n(10)
+TM.WordFrequency.Groups.Unnest(series.2, "book", "text") %>% top_n(10) %>% View()
+TM.WordFrequency.Groups.Unnest(series.2[series.2$book == titles[2],], "book", "text") %>% top_n(10)
+
+
+# todo: optional stopword argument. unnest token type. list out stopword libraries & descriptions for arguments
+table(stop_words$lexicon)
+filter(stop_words, lexicon == "snowball")
+
+# unnest tokens
+series.2 %>% unnest_tokens(sentence, text, token = "sentences") %>% View()
+series.2 %>% unnest_tokens(split, text, token = "ngrams", n = 2) %>% View()
+series.2 %>% unnest_tokens(split, text, token = "regex", pattern = "harry") %>% View()
+series.2 %>% unnest_tokens(sentence, text, to_lower = F) %>% View()
+
+
+# non standard evaluation
+x <- seq(0, 2 * pi, length = 100)
+sinx <- sin(x)
+plot(x, sinx, type = "l")
+str(x)
+rm(x, sinx)

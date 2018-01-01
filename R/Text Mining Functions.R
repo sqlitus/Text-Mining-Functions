@@ -113,9 +113,23 @@ TM.WordFrequency.Groups.Unnest(series, c("book","chapter"), "word")
 
 
 
+TM.WordUseByGroup <- function(df, group.col.string, text.col.string){
+  # percent of word use within group VS across entire population
+  require(dplyr); require(lazyeval); require(tidytext)
+  pct.group <- df %>%
+    unnest_tokens_("word", text.col.string) %>%
+    anti_join(stop_words) %>%
+    count(word) %>%
+    transmute(word, all_words = n / sum(n))
+  df %>%
+    unnest_tokens_("word", text.col.string) %>%
+    anti_join(stop_words) %>%
+    group_by(.dots = group.col.string) %>%
+    count(word) %>%
+    mutate(group_words = n / sum(n)) %>%
+    left_join(pct.group) %>%
+    arrange(desc(group_words)) %>%
+    ungroup()
+}
+TM.WordUseByGroup(series.2, "book", "text") %>% top_n(20) %>% View()
 
-# check
-series %>% anti_join(stop_words) %>% group_by(book) %>% count(word, sort = TRUE) %>% top_n(10) %>%
-  ggplot(aes(word, n)) + geom_bar(stat = "identity")
-
-# todo: optional stopword argument. unnest token type. list out stopword libraries & descriptions for arguments
