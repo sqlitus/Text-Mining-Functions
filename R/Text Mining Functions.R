@@ -36,7 +36,7 @@ for(i in seq_along(titles)) { # 1 to length(titles). (looping through each book)
 }
 
 
-## dataframe w/ books, chapters, text. Similar to ticket data.
+## dataframe w/ NO UNNESTED TOKENS. books, chapters, text. Similar to ticket data.
 series.2 <- tibble()
 for (i in seq_along(titles)){
   clean.2 <- tibble(chapter = seq_along(books[[i]]), text = books[[i]]) %>%
@@ -48,7 +48,7 @@ for (i in seq_along(titles)){
 
 
 
-# Word Frequency ----
+# Tidy Text & Word Frequency Functions ----
 
 
 TM.WordFrequency <- function(df, word.col.string){
@@ -186,11 +186,87 @@ TM.WordUseByGroup.Plot <- function(df, group.col.string, text.col.string, top.x 
     scale_x_log10(labels = scales::percent_format()) +
     scale_y_log10(labels = scales::percent_format()) +
     scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
-    facet_wrap(~ group.col.string, ncol = 2) +
+    facet_wrap(group.col.string, ncol = 3) +
     theme(legend.position="none") +
     labs(y = "Population Frequency", x = "Individual Group Frequency")
+  corr <- pct.all %>% 
+    group_by(.dots = group.col.string) %>%
+    summarise(correlation = cor(group_words, all_words), 
+              p_value = cor.test(group_words, all_words)$p.value)
   
-  return(list(data = pct.all, plot = p))
+  return(list(data = pct.all, plot = p, correlation = corr))
 }
 TM.WordUseByGroup.Plot(series.2, "book", "text")
+TM.WordUseByGroup.Plot(series.2, "book", "text")[[1]] %>% View()
 
+
+TM.WordUseByGroup.Plot.Topx <- function(df, group.col.string, text.col.string, top.x = 10){
+  # percent of word use within group VS across entire population
+  require(dplyr); require(lazyeval); require(tidytext); require(ggplot2)
+  pct.group <- df %>%
+    unnest_tokens_("word", text.col.string) %>%
+    anti_join(stop_words) %>%
+    count(word) %>%
+    transmute(word, all_words = n / sum(n))
+  pct.all <- df %>%
+    unnest_tokens_("word", text.col.string) %>%
+    anti_join(stop_words) %>%
+    group_by(.dots = group.col.string) %>%
+    count(word) %>%
+    mutate(group_words = n / sum(n)) %>%
+    left_join(pct.group) %>%
+    arrange(desc(group_words)) %>%
+    ungroup()
+  
+  top.x.distinct.words.by.group <- pct.all %>% select(word) %>% distinct() %>% slice(1:top.x)
+  top.x.distinct.words.by.all <- pct.all %>% arrange(desc(all_words)) %>%
+    select(word) %>% distinct() %>% slice(1:top.x)
+  
+  top.words <- bind_rows(top.x.distinct.words.by.all, top.x.distinct.words.by.group) %>% 
+    inner_join(pct.all) %>% distinct()
+  
+  p <- ggplot(top.words, aes(x = group_words, y = all_words, color = abs(all_words - group_words))) +
+    geom_abline(color = "gray40", lty = 2) +
+    geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
+    geom_text(aes(label = word), check_overlap = FALSE, vjust = 1.5) +
+    scale_x_log10(labels = scales::percent_format()) +
+    scale_y_log10(labels = scales::percent_format()) +
+    scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
+    facet_wrap(group.col.string, ncol = 3) +
+    theme(legend.position="none") +
+    labs(y = "Population Frequency", x = "Individual Group Frequency")
+  corr <- pct.all %>% 
+    group_by(.dots = group.col.string) %>%
+    summarise(correlation = cor(group_words, all_words), 
+              p_value = cor.test(group_words, all_words)$p.value)
+  
+  return(list(data = pct.all, plot = p, correlation = corr))
+}
+TM.WordUseByGroup.Plot.Topx(series.2, "book", "text")
+TM.WordUseByGroup.Plot.Topx(series.2, "book", "text")[[1]] %>% View()
+
+# to do: top x unique words ^ instead of top x records (since words repeat within the category groups)
+# dense rank check results !!!!
+
+# Sentiment Analysis ----
+
+str(sentiments)
+View(sentiments)
+table(sentiments$lexicon)
+sentiments[grep("down", sentiments$word),] %>% View()
+filter(sentiments, lexicon == "loughran") %>% View()
+get_sentiments("nrc")
+filter(sentiments, lexicon == "nrc")
+# ADVISEMENT: DO NOT REMOVE STOPWORDS FOR SENTIMENT ANALYSIS
+
+# overall sentiment
+TM.Sentiment.Overall <- function(df, word.col.string){
+  require(dplyr); require(lazyeval); require(tidytext);
+  
+  df %>% right_join(get_sentiments("nrc")) %>%
+    filter(!is.na(sentiment)) %>%
+    count(sentiment, sort = TRUE)
+}
+TM.Sentiment.Overall(series, "word")  
+
+#todo: replace anti_join with filter(anti_join, lexicon %in% @list)
