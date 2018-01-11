@@ -259,7 +259,7 @@ get_sentiments("nrc")
 filter(sentiments, lexicon == "nrc")
 # ADVISEMENT: DO NOT REMOVE STOPWORDS FOR SENTIMENT ANALYSIS
 
-# overall sentiment
+
 TM.Sentiment.Overall <- function(df, word.col.string){
   require(dplyr); require(lazyeval); require(tidytext);
   
@@ -267,6 +267,27 @@ TM.Sentiment.Overall <- function(df, word.col.string){
     filter(!is.na(sentiment)) %>%
     count(sentiment, sort = TRUE)
 }
-TM.Sentiment.Overall(series, "word")  
+TM.Sentiment.Overall(series, "word")
+
+TM.Sentiment.Over.Time <- function(df, group.col.string, word.col.string){
+  
+}
 
 #todo: replace anti_join with filter(anti_join, lexicon %in% @list)
+
+# make a function that unnests tokens & removes stopwords of choice. pipe into any of the TM functions...
+TM.TidyText <- function(df, text.col.string, stopword.lexicon.string = NULL){
+  require(dplyr); require(lazyeval); require(tidytext)
+  if (!missing(stopword.lexicon.string)) {
+    removewords <- filter(stop_words, lexicon == stopword.lexicon.string)
+    df %>%
+      unnest_tokens_("word", text.col.string) %>% # entire function needs standard eval
+      anti_join(removewords)
+  } else {
+    df %>% unnest_tokens_("word", text.col.string) # entire function needs standard eval  
+  }
+}
+TM.TidyText(series.2, "text", "onix")
+TM.TidyText(series.2, "text")
+
+table(stop_words$lexicon)
